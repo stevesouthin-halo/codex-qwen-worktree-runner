@@ -1,0 +1,10 @@
+node_modules/
+jobs/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.qwen/
+*credentials*.json
+*.log
+task.local.json

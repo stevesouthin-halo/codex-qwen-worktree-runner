@@ -1,0 +1,10 @@
+{
+  "name": "codex-qwen-worktree-runner",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "dependencies": {
+    "@qwen-code/qwen-code": "0.28.3",
+    "node": "^26.12.1"
+  }
+}

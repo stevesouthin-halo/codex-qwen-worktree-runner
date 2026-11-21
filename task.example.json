@@ -1,0 +1,5 @@
+{
+  "title": "Fix one bounded coding issue",
+  "objective": "Describe the exact behavior to change and relevant repository paths.",
+  "acceptance": "State the observable behavior and the meaningful test command that must pass."
+}
