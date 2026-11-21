@@ -78,6 +78,19 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn('scopes overlap', result.stderr)
 
+    def test_budget_failure_reports_cause_and_retry_guidance(self):
+        self.fake.write_text("#!/usr/bin/env python3\n"
+                             "import json,sys\n"
+                             "print(json.dumps({'error': {'type': 'FatalBudgetExceededError', "
+                             "'message': 'tool-call budget exceeded', 'code': 55}}))\n"
+                             "sys.exit(55)\n")
+        result = self.call('agentctl.py', '--task', str(self.task('alpha')))
+        self.assertEqual(result.returncode, 55)
+        manifest = json.loads(Path(result.stdout.strip()).read_text())
+        self.assertEqual(manifest['failure']['type'], 'FatalBudgetExceededError')
+        self.assertEqual(manifest['changedPaths'], [])
+        self.assertIn('Narrow the objective', manifest['nextAction'])
+
 
 if __name__ == '__main__':
     unittest.main()

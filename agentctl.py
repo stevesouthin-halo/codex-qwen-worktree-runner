@@ -84,7 +84,8 @@ def run(args):
     scope_note = ('Owned paths: ' + ', '.join(task['paths']) + '\nEdit only these paths; report if a shared file is needed.\n\n') if task.get('paths') else ''
     prompt = (f"Job: {task['title']}\n\nObjective: {task['objective']}\n\n"
               f"Acceptance: {task['acceptance']}\n\n" + scope_note +
-              "Work only in this checkout. Make the smallest coherent change. Run relevant tests. "
+              "Work only in this checkout. Make the smallest coherent change early, then run relevant tests. "
+              "If the task is too broad for the tool limit, stop and name the smallest follow-up instead of searching until the cap. "
               "Do not push, deploy, access production credentials, or start subagents. "
               "Do not keep polling after a result is known. End with changed files, tests, and blockers.\n")
     (jobdir / 'prompt.txt').write_text(prompt)
@@ -130,8 +131,14 @@ def run(args):
             results = [x for x in output if isinstance(x, dict) and x.get('type') == 'result']
             if results:
                 meta['agentResult'] = {k: results[-1].get(k) for k in ('subtype', 'result', 'duration_ms', 'usage') if k in results[-1]}
+        elif isinstance(output, dict) and isinstance(output.get('error'), dict):
+            error = output['error']
+            meta['failure'] = {k: error[k] for k in ('type', 'message', 'code') if isinstance(error.get(k), (str, int))}
     except (ValueError, OSError):
         pass
+    if meta['state'] == 'needs_attention' and not changed_paths:
+        meta['nextAction'] = ('Narrow the objective and acceptance criteria before retrying; this run made no changes.'
+                              if rc == 55 else 'Inspect the failure and retry only after correcting its cause; this run made no changes.')
     write_json(jobdir / 'result.json', meta)
     print(jobdir / 'result.json')
     return rc
@@ -163,7 +170,8 @@ def main():
         else:
             for x in sorted(JOBS.glob('*/result.json'), reverse=True):
                 data = json.loads(x.read_text())
-                print(data['id'], data['state'], data['title'])
+                failure = data.get('failure', {}).get('type', '')
+                print(data['id'], data['state'], len(data.get('changedPaths') or []), failure, data['title'])
         return 0
     except (ValueError, OSError, subprocess.CalledProcessError) as exc:
         print(f'agentctl: {exc}', file=sys.stderr)
