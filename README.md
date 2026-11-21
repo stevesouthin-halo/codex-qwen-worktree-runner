@@ -4,9 +4,11 @@ A macOS CLI that lets Codex hand a **specific coding task** to Qwen Code, then r
 
 Use it when you want Codex to plan, review, and decide what ships while Qwen does the implementation or test-writing work. Qwen runs on its own account or provider allowance. Codex review still uses Codex credits. The runner does not automatically intercept every coding request, merge code, push changes, or deploy. [AGENTS.example.md](AGENTS.example.md) is an optional instruction snippet for a target repository.
 
+**Security boundary:** A worktree is for separating edits, not protecting secrets. Qwen runs with headless approval, can read other files accessible to your macOS user, and can use the network. Use a separate macOS user or disposable VM for untrusted repositories, and read [SECURITY.md](SECURITY.md) before using it on sensitive work.
+
 ## Install on macOS
 
-You need Git, Python 3, npm, and a Qwen Code account or compatible provider. The coding repository must have a clean Git checkout. This repository is private during its trial, so cloning it requires access from its owner.
+You need Git, Python 3, npm, and a Qwen Code account or compatible provider. The coding repository must have a clean Git checkout. The runner itself is free and MIT licensed; Qwen account or provider charges are separate.
 
 ```sh
 git clone https://github.com/stevesouthin-halo/codex-qwen-worktree-runner.git
@@ -72,3 +74,5 @@ The tests use a fake Qwen executable and disposable Git repositories; they do no
 ```sh
 python3 -m unittest discover -s tests -v
 ```
+
+Pull requests and issues are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the review workflow and [SECURITY.md](SECURITY.md) for private vulnerability reporting. CI runs the fake-agent tests and a clean macOS install without consuming Qwen model allowance.

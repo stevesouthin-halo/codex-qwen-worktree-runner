@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  macos-smoke:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install and test without model calls
+        run: ./setup.sh
+      - name: Check dependency advisories
+        run: npm audit --omit=dev --audit-level=high
+      - name: Check Qwen CLI entry point
+        run: node_modules/.bin/node node_modules/@qwen-code/qwen-code/cli-entry.js --version
