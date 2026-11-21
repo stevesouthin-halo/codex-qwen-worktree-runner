@@ -53,6 +53,33 @@ def write_json(path, data):
     temp.replace(path)
 
 
+def report(since_hours):
+    cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=since_hours)
+    jobs = []
+    for path in JOBS.glob('*/result.json'):
+        try:
+            item = json.loads(path.read_text())
+            started = dt.datetime.fromisoformat(item['startedAt'])
+            if started.tzinfo is None or started < cutoff:
+                continue
+            jobs.append(item)
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+    finished = [x for x in jobs if x.get('state') == 'finished']
+    attention = [x for x in jobs if x.get('state') == 'needs_attention']
+    reported = [x['agentResult']['usage'] for x in jobs
+                if isinstance(x.get('agentResult'), dict) and isinstance(x['agentResult'].get('usage'), dict)]
+    return {'sinceHours': since_hours, 'jobs': len(jobs), 'finished': len(finished),
+            'needsAttention': len(attention), 'running': sum(x.get('state') == 'running' for x in jobs),
+            'budgetExceeded': sum(x.get('exitCode') == 55 for x in jobs),
+            'noChange': sum(x.get('state') != 'running' and not x.get('changedPaths') for x in jobs),
+            'changedPaths': sum(len(x.get('changedPaths') or []) for x in jobs),
+            'qwenTokensReported': sum(x.get('total_tokens', 0) for x in reported),
+            'qwenOutputTokensReported': sum(x.get('output_tokens', 0) for x in reported),
+            'qwenCacheReadTokensReported': sum(x.get('cache_read_input_tokens', 0) for x in reported),
+            'jobsWithoutTokenUsage': len(jobs) - len(reported)}
+
+
 def run(args):
     repo = repo_path(args.repo)
     if git('status', '--porcelain', cwd=repo):
@@ -159,6 +186,8 @@ def main():
     s = sub.add_parser('status', help='print a job result')
     s.add_argument('job_id')
     sub.add_parser('list', help='list job IDs and states')
+    r = sub.add_parser('report', help='summarize bounded Qwen jobs and reported token usage')
+    r.add_argument('--since-hours', type=float, default=24)
     a = p.parse_args()
     try:
         if a.command == 'run':
@@ -167,6 +196,10 @@ def main():
             return run(a)
         if a.command == 'status':
             print((JOBS / a.job_id / 'result.json').read_text())
+        elif a.command == 'report':
+            if not 0 < a.since_hours <= 24 * 30:
+                raise ValueError('since-hours must be greater than 0 and at most 720')
+            print(json.dumps(report(a.since_hours), indent=2))
         else:
             for x in sorted(JOBS.glob('*/result.json'), reverse=True):
                 data = json.loads(x.read_text())

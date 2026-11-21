@@ -91,6 +91,19 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(manifest['changedPaths'], [])
         self.assertIn('Narrow the objective', manifest['nextAction'])
 
+    def test_report_counts_recent_jobs_without_claiming_missing_token_usage(self):
+        result = self.call('agentctl.py', '--task', str(self.task('alpha')))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        summary = subprocess.run([sys.executable, str(self.root / 'agentctl.py'),
+                                  'report', '--since-hours', '1'], text=True,
+                                 capture_output=True, check=True)
+        report = json.loads(summary.stdout)
+        self.assertEqual(report['jobs'], 1)
+        self.assertEqual(report['finished'], 1)
+        self.assertEqual(report['changedPaths'], 1)
+        self.assertEqual(report['qwenTokensReported'], 0)
+        self.assertEqual(report['jobsWithoutTokenUsage'], 1)
+
 
 if __name__ == '__main__':
     unittest.main()
